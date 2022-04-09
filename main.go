@@ -50,12 +50,12 @@ func main() {
 		fmt.Println(person)
 	}
 
-	// person, err := GetPersonWithId(2)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	person, err := GetPersonWithSqlxById(2)
+	if err != nil {
+		panic(err)
+	}
 
-	// fmt.Print(person)
+	fmt.Print(person)
 
 }
 
@@ -193,4 +193,13 @@ func GetPersonWithSqlx() ([]Person, error) {
 		return nil, err
 	}
 	return persons, nil
+}
+func GetPersonWithSqlxById(id int) (*Person, error) {
+	query := "select person_id,person_name from person where person_id = ?"
+	person := Person{}
+	err := db.Get(&person, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return &person, nil
 }
