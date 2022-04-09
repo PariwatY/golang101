@@ -124,6 +124,8 @@ func GetPersonWithId(id int) (*Person, error) {
 
 func AddPerson(namePerson string) error {
 
+	tx, err := db.Begin()
+
 	query := "insert into person (person_name) values (?)"
 
 	result, err := db.Exec(query, namePerson)
@@ -133,11 +135,17 @@ func AddPerson(namePerson string) error {
 
 	affect, err := result.RowsAffected()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	if affect <= 0 {
 		return errors.New("can't insert'")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
 	}
 
 	return nil
