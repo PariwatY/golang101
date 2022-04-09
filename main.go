@@ -1,23 +1,23 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 )
 
-var db *sql.DB
+var db *sqlx.DB
 
 func main() {
 	var err error
 	// Database Config
 	cfg := getDBConfig()
 	// Get a database handle.
-	db, err = sql.Open("mysql", cfg.FormatDSN())
+	db, err = sqlx.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,9 +41,9 @@ func main() {
 	// }
 
 	//Get all person
-	persons, err := GetPerson()
+	persons, err := GetPersonWithSqlx()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	for _, person := range persons {
@@ -69,24 +69,20 @@ func getDBConfig() mysql.Config {
 	}
 }
 
-func setDatabaseConnection(db *sql.DB) {
+func setDatabaseConnection() {
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 }
 
 type Person struct {
-	id   int
-	name string
+	Id   int    `db:"person_id"`
+	Name string `db:"person_name"`
 }
 
 func GetPerson() ([]Person, error) {
-	err := db.Ping()
-	if err != nil {
-		return nil, err
-	}
 	// Set Datbase Connection
-	setDatabaseConnection(db)
+	setDatabaseConnection()
 
 	query := "select person_id,person_name from person"
 	rows, err := db.Query(query)
@@ -98,7 +94,7 @@ func GetPerson() ([]Person, error) {
 	persons := []Person{}
 	for rows.Next() {
 		person := Person{}
-		err := rows.Scan(&person.id, &person.name)
+		err := rows.Scan(&person.Id, &person.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +114,7 @@ func GetPersonWithId(id int) (*Person, error) {
 
 	person := Person{}
 
-	err = sql.Scan(&person.id, &person.name)
+	err = sql.Scan(&person.Id, &person.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +147,7 @@ func UpdatePerson(person Person) error {
 
 	query := "update person set person_name = ? where person_id = ?"
 
-	result, err := db.Exec(query, person.name, person.id)
+	result, err := db.Exec(query, person.Name, person.Id)
 	if err != nil {
 		return err
 	}
@@ -187,4 +183,14 @@ func DeletePerson(id int) error {
 	}
 
 	return nil
+}
+
+func GetPersonWithSqlx() ([]Person, error) {
+	query := "select person_id,person_name from person"
+	persons := []Person{}
+	err := db.Select(&persons, query)
+	if err != nil {
+		return nil, err
+	}
+	return persons, nil
 }
